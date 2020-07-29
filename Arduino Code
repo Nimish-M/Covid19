@@ -1,0 +1,144 @@
+
+#include <Wire.h>
+#include <ESP8266WiFi.h>                                                    
+#include <ESP8266HTTPClient.h>
+
+                                                                       
+const char* ssid = "IOT";                                         
+const char* password =  "iot12345"; 
+const char* host = "api.thingspeak.com";                                    
+const int httpPortRead = 80;                                           
+                                                
+const char* url1 = "/apps/thinghttp/send_request?api_key=RG0HRQ4GV2S2TTSP";    
+const char* url2 = "/apps/thinghttp/send_request?api_key=GTPQFM1HLX3KPHLD";
+const char* url3 = "/apps/thinghttp/send_request?api_key=5SRRRAZ05TF9YD16"; 
+
+
+int To_remove;      
+
+String Cases,Deaths,Recovered,Data_Raw,Data_Raw_1,Data_Raw_2,Data_Raw_3;  
+
+WiFiClient client;                                                          
+HTTPClient http; 
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 20, 4);
+
+void setup() {
+  
+  lcd.begin(20,4);
+  lcd.init();
+  lcd.backlight();
+  Serial.begin(115200);            
+ 
+  WiFi.disconnect();                                                         
+  delay(1000);                                                                  
+  WiFi.begin(ssid, password);                                                   
+
+  Serial.println("Connected to the WiFi network");                                        
+  Serial.println(WiFi.localIP()); 
+
+  /* lcd.setCursor(0,3); 
+lcd.print("      WiFi connected"); */
+  
+  
+}
+
+
+ void loop()                                                                      
+{
+  
+      //Reading 1: Reading of cases
+    if( http.begin(host,httpPortRead,url1))                            
+      {
+        int httpCode = http.GET();                                                                 
+        if (httpCode > 0)                                                              
+        {
+          if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) 
+            {                
+              
+              Data_Raw = http.getString();   
+            
+              
+              Data_Raw_1 = Data_Raw; 
+                                                   
+              To_remove = Data_Raw_1.indexOf(">");                                                     
+              Data_Raw_1.remove(0,To_remove+1);                       
+              To_remove = Data_Raw_1.indexOf("<");                                                   
+              Data_Raw_1.remove(To_remove,Data_Raw_1.length());       
+              Cases=Data_Raw_1;
+              
+              Serial.print("Cases: ");  
+              Serial.println(Cases); 
+
+              Data_Raw_2=Data_Raw;
+
+              To_remove = Data_Raw_2.indexOf("<span>");
+              Data_Raw_2.remove(0,To_remove+6);
+              Data_Raw_3=Data_Raw_2;
+              To_remove = Data_Raw_2.indexOf("</span>");
+              Data_Raw_2.remove(To_remove,Data_Raw_2.length());
+
+              Deaths=Data_Raw_2;
+
+              Serial.print("Deaths: ");
+              Serial.println(Deaths);
+
+
+              To_remove = Data_Raw_3.indexOf("<span>");
+              Data_Raw_3.remove(0,To_remove+6);
+
+              To_remove = Data_Raw_3.indexOf("<");
+              Data_Raw_3.remove(To_remove,Data_Raw_3.length());
+
+              Recovered=Data_Raw_3;
+              
+              Serial.print("Recovered: ");
+              Serial.println(Recovered);
+                                                                                        
+            }
+        }
+        else //If we can't get data
+        {
+          Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+        }
+
+
+
+        http.end();                                                                 
+      } 
+    else //If we can't connect to the HTTP
+      {
+        Serial.printf("[HTTP} Unable to connect\n");
+      }
+
+   
+    delay(5000);
+
+    while (WiFi.status() != WL_CONNECTED)     //In case the Wifi connexion is lost                                    
+      { 
+        
+        WiFi.disconnect();                                                        
+        delay(1000);                                                             
+        
+        WiFi.begin(ssid, password);                                              
+        Serial.println("Reconnecting to WiFi..");       
+        delay(10000);                                                             
+      }
+
+           lcd.setCursor(0,0); 
+              lcd.print("COVID19_INDIA");   
+              
+              lcd.setCursor(0,1); 
+              lcd.print("Cases : ");      
+              lcd.print(Cases); 
+
+              lcd.setCursor(0,2); 
+              lcd.print("Deaths : "); 
+              lcd.print(Deaths); 
+
+              lcd.setCursor(0,3);
+              lcd.print("Recovered :");
+              lcd.print(Recovered);
+                                      
+} 
+  
